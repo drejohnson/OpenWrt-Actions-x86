@@ -77,10 +77,10 @@ jobs:
     - name: Load custom configuration
       run: |
         [ -e $CONFIG_FILE ] && mv $CONFIG_FILE openwrt/.config
-        cp -rf default-settings openwrt/package/default-settings
-        git clone https://github.com/jerrykuku/luci-theme-argon.git openwrt/package/luci-theme-argon
         chmod +x $DIY_SH
         cd openwrt
+        rm -rf package/default-settings/files/zzz-default-settings
+        cp -f ../zzz-default-settings package/lean/default-settings/files/
         $GITHUB_WORKSPACE/$DIY_SH
     - name: SSH connection to Actions
       uses: P3TERX/debugger-action@main
