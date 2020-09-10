@@ -80,7 +80,7 @@ jobs:
         chmod +x $DIY_SH
         cd openwrt
         rm -rf package/default-settings/files/zzz-default-settings
-        cp -f ../zzz-default-settings package/lean/default-settings/files/
+        cp -f $GITHUB_WORKSPACE/zzz-default-settings package/lean/default-settings/files/
         $GITHUB_WORKSPACE/$DIY_SH
     - name: SSH connection to Actions
       uses: P3TERX/debugger-action@main
