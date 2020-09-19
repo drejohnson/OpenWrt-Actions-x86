@@ -21,7 +21,7 @@ on:
 #    - cron: 0 8 * * 5
 
 env:
-  REPO_URL: https://github.com/coolsnowwolf/lede
+  REPO_URL: https://git.openwrt.org/openwrt/openwrt.git
   REPO_BRANCH: master
   CONFIG_FILE: .config
   DIY_SH: diy.sh
@@ -71,6 +71,8 @@ jobs:
         cd openwrt
         echo "src-git helloworld https://github.com/OpenWrt-Actions/helloworld" >> feeds.conf.default
         echo "src-git lienol https://github.com/OpenWrt-Actions/openwrt-package-lienol" >> feeds.conf.default
+        git clone https://github.com/kuoruan/openwrt-upx.git package/openwrt-upx
+        git clone https://github.com/jerrykuku/luci-theme-argon.git package/luci-theme-argon
         ./scripts/feeds update -a
         ./scripts/feeds install -a
 
@@ -79,8 +81,7 @@ jobs:
         [ -e $CONFIG_FILE ] && mv $CONFIG_FILE openwrt/.config
         chmod +x $DIY_SH
         cd openwrt
-        rm -rf package/default-settings/files/zzz-default-settings
-        cp -f $GITHUB_WORKSPACE/zzz-default-settings package/lean/default-settings/files/
+        cp -rf $GITHUB_WORKSPACE/default-settings openwrt/package/default-settings
         $GITHUB_WORKSPACE/$DIY_SH
     - name: SSH connection to Actions
       uses: P3TERX/debugger-action@main
@@ -91,6 +92,7 @@ jobs:
       run: |
         cd openwrt
         make defconfig
+        make package/upx/{clean,compile} V=s
         make download -j8
         find dl -size -1024c -exec ls -l {} \;
         find dl -size -1024c -exec rm -f {} \;
@@ -123,9 +125,6 @@ jobs:
       run: |
         cd openwrt/bin/targets/*/*
         rm -rf packages
-        rm -rf *uImage
-        rm -rf *.manifest
-        rm -rf *.seed
         echo "::set-env name=FIRMWARE::$PWD"
         echo "::set-output name=status::success"
 
