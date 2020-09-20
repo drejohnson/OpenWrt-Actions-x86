@@ -92,6 +92,7 @@ jobs:
         cd openwrt
         make defconfig
         make toolchain/install -j8
+        make tools/install -j8
         make package/upx/{clean,compile} V=s
         make download -j8
         find dl -size -1024c -exec ls -l {} \;
