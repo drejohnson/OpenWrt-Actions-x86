@@ -1,0 +1,100 @@
+diff --git a/feeds.conf.default b/feeds.conf.default
+index 03bfacb620..500af5a7c1 100644
+--- a/feeds.conf.default
++++ b/feeds.conf.default
+@@ -2,7 +2,8 @@ src-git packages https://git.openwrt.org/feed/packages.git
+ src-git luci https://git.openwrt.org/project/luci.git
+ src-git routing https://git.openwrt.org/feed/routing.git
+ src-git telephony https://git.openwrt.org/feed/telephony.git
+-src-git freifunk https://github.com/freifunk/openwrt-packages.git
++src-git lienol https://github.com/xiaorouji/openwrt-package.git;master
++#src-git freifunk https://github.com/freifunk/openwrt-packages.git
+ #src-git video https://github.com/openwrt/video.git
+ #src-git targets https://github.com/openwrt/targets.git
+ #src-git management https://github.com/openwrt-management/packages.git
+diff --git a/include/target.mk b/include/target.mk
+index 03550c6ca6..7469e32ddd 100644
+--- a/include/target.mk
++++ b/include/target.mk
+@@ -17,19 +17,24 @@ DEFAULT_PACKAGES:=\
+ 	base-files \
+ 	busybox \
+ 	ca-bundle \
++  curl \
++  default-settings \
+ 	dropbear \
+ 	fstools \
+ 	libc \
+ 	libgcc \
+-	libustream-wolfssl \
+ 	logd \
++  luci \
++  luci-compat \
++  luci-lib-ipkg \
+ 	mtd \
+ 	netifd \
+ 	opkg \
+ 	uci \
+ 	uclient-fetch \
+ 	urandom-seed \
+-	urngd
++	urngd \
++  wget \
+ # For the basic set
+ DEFAULT_PACKAGES.basic:=
+ # For nas targets
+@@ -40,15 +45,19 @@ DEFAULT_PACKAGES.nas:=\
+ 	mdadm
+ # For router targets
+ DEFAULT_PACKAGES.router:=\
+-	dnsmasq \
++	dnsmasq-full \
+ 	firewall \
+ 	ip6tables \
++  ip-full \
+ 	iptables \
++  iptables-mod-tproxy \
+ 	kmod-ipt-offload \
++  kmod-tun \
+ 	odhcp6c \
+ 	odhcpd-ipv6only \
+ 	ppp \
+-	ppp-mod-pppoe
++	ppp-mod-pppoe \
++  resolveip
+ 
+ ifneq ($(DUMP),)
+   all: dumpinfo
+diff --git a/package/kernel/linux/files/sysctl-nf-conntrack.conf b/package/kernel/linux/files/sysctl-nf-conntrack.conf
+index 37baf5fd6f..4a3f8bfc61 100644
+--- a/package/kernel/linux/files/sysctl-nf-conntrack.conf
++++ b/package/kernel/linux/files/sysctl-nf-conntrack.conf
+@@ -3,7 +3,7 @@
+ 
+ net.netfilter.nf_conntrack_acct=1
+ net.netfilter.nf_conntrack_checksum=0
+-net.netfilter.nf_conntrack_max=16384
++net.netfilter.nf_conntrack_max=65535
+ net.netfilter.nf_conntrack_tcp_timeout_established=7440
+ net.netfilter.nf_conntrack_udp_timeout=60
+ net.netfilter.nf_conntrack_udp_timeout_stream=180
+diff --git a/tools/Makefile b/tools/Makefile
+index 65bec34c1b..2d269d7aa1 100644
+--- a/tools/Makefile
++++ b/tools/Makefile
+@@ -26,6 +26,7 @@ tools-y += e2fsprogs fakeroot findutils firmware-utils flex gengetopt
+ tools-y += libressl libtool lzma m4 make-ext4fs missing-macros mkimage
+ tools-y += mklibs mm-macros mtd-utils mtools padjffs2 patch-image
+ tools-y += patchelf pkgconf quilt squashfskit4 sstrip zip zlib zstd
++tools-y += ucl upx
+ tools-$(BUILD_B43_TOOLS) += b43-tools
+ tools-$(BUILD_ISL) += isl
+ tools-$(BUILD_TOOLCHAIN) += expat gmp libelf mpc mpfr
+@@ -38,6 +39,7 @@ tools-$(CONFIG_USES_MINOR) += kernel2minor
+ tools-$(CONFIG_USE_SPARSE) += sparse
+ 
+ # builddir dependencies
++$(curdir)/upx/compile := $(curdir)/ucl/compile
+ $(curdir)/autoconf/compile := $(curdir)/m4/compile
+ $(curdir)/automake/compile := $(curdir)/m4/compile $(curdir)/autoconf/compile $(curdir)/pkgconf/compile $(curdir)/xz/compile
+ $(curdir)/b43-tools/compile := $(curdir)/bison/compile

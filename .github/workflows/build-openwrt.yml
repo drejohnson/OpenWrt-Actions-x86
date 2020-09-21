@@ -25,6 +25,7 @@ env:
   REPO_BRANCH: master
   CONFIG_FILE: .config
   DIY_SH: diy.sh
+  PASSWALL: true
   SSH_ACTIONS: false
   GITHUB_USER_NAME: drejohnson
   UPLOAD_BIN_DIR: false
@@ -66,12 +67,29 @@ jobs:
         echo "::set-env name=DATE::$(TZ=UTC-8 date "+%Y%m%d")"
         echo "::set-env name=RELEASE_DATE::$(TZ=UTC-8 date "+%Y-%m-%d")"
 
+    # UPX
+    - name: Add UPX/UCL
+      run: |
+        cp -R tools/upx ./openwrt/tools
+        cp -R tools/ucl ./openwrt/tools
+
+    # Patch
+    - name: Run Patch
+      run: |
+        cp main.patch ./openwrt && cd ./openwrt && patch -p1 < main.patch
+
+    # PassWall
+    - name: Update and install feeds passwall
+      if: env.PASSWALL == 'true'
+      run: |
+        echo "src-git lienol https://github.com/OpenWrt-Actions/openwrt-package-lienol" >> feeds.conf.default
+        ./scripts/feeds update -a
+        ./scripts/feeds install -a
+
     - name: Update and install feeds
+      if: env.PASSWALL != 'true'
       run: | 
         cd openwrt
-        echo "src-git lienol https://github.com/OpenWrt-Actions/openwrt-package-lienol" >> feeds.conf.default
-        git clone https://github.com/kuoruan/openwrt-upx.git package/openwrt-upx
-        git clone https://github.com/jerrykuku/luci-theme-argon.git package/luci-theme-argon
         ./scripts/feeds update -a
         ./scripts/feeds install -a
 
@@ -80,7 +98,7 @@ jobs:
         [ -e $CONFIG_FILE ] && mv $CONFIG_FILE openwrt/.config
         chmod +x $DIY_SH
         cd openwrt
-        cp -rf $GITHUB_WORKSPACE/default-settings package/default-settings
+        cp -rf $GITHUB_WORKSPACE/package/default-settings package/default-settings
         $GITHUB_WORKSPACE/$DIY_SH
     - name: SSH connection to Actions
       uses: P3TERX/debugger-action@main
@@ -91,9 +109,6 @@ jobs:
       run: |
         cd openwrt
         make defconfig
-        make toolchain/install -j8
-        make tools/install -j8
-        make package/upx/{clean,compile} V=s
         make download -j8
         find dl -size -1024c -exec ls -l {} \;
         find dl -size -1024c -exec rm -f {} \;
