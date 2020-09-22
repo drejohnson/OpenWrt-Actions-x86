@@ -82,6 +82,7 @@ jobs:
     - name: Update and install feeds passwall
       if: env.PASSWALL == 'true'
       run: |
+        cd openwrt
         echo "src-git lienol https://github.com/OpenWrt-Actions/openwrt-package-lienol" >> feeds.conf.default
         ./scripts/feeds update -a
         ./scripts/feeds install -a
