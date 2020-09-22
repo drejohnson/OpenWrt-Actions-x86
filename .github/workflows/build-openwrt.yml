@@ -78,17 +78,17 @@ jobs:
       run: |
         cp main.patch ./openwrt && cd ./openwrt && patch -p1 < main.patch
 
-    # PassWall
-    - name: Update and install feeds passwall
-      if: env.PASSWALL == 'true'
-      run: |
-        cd openwrt
-        echo "src-git lienol https://github.com/OpenWrt-Actions/openwrt-package-lienol" >> feeds.conf.default
-        ./scripts/feeds update -a
-        ./scripts/feeds install -a
+    # # PassWall
+    # - name: Update and install feeds passwall
+    #   if: env.PASSWALL == 'true'
+    #   run: |
+    #     cd openwrt
+    #     echo "src-git lienol https://github.com/OpenWrt-Actions/openwrt-package-lienol" >> feeds.conf.default
+    #     ./scripts/feeds update -a
+    #     ./scripts/feeds install -a
 
     - name: Update and install feeds
-      if: env.PASSWALL != 'true'
+      # if: env.PASSWALL != 'true'
       run: | 
         cd openwrt
         ./scripts/feeds update -a
