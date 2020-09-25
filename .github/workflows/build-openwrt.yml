@@ -28,9 +28,12 @@ env:
   PASSWALL: true
   SSH_ACTIONS: false
   GITHUB_USER_NAME: drejohnson
+  GITHUB_USER_EMAIL: ${{ secrets.EMAIL }}
+  GITHUB: https://github.com/drejohnson/OpenWrt-Actions-x86.git
   UPLOAD_BIN_DIR: false
   UPLOAD_FIRMWARE: true
   UPLOAD_WETRANSFER: false
+  CREATE_RELEASE: true
   TZ: Asia/Shanghai
 
 jobs:
@@ -178,9 +181,9 @@ jobs:
             ${{ github.event.commits[0].message }}
         files: ${{ env.FIRMWARE }}/*
 
-    - name : Upload artifact
-      #working-directory: ./openwrt
-      uses: actions/upload-artifact@master
-      with:
-        name: OpenWrt
-        path: bin
+    # - name : Upload artifact
+    #   #working-directory: ./openwrt
+    #   uses: actions/upload-artifact@master
+    #   with:
+    #     name: OpenWrt
+    #     path: bin
