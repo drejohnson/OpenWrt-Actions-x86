@@ -14,15 +14,14 @@ index 03bfacb620..de3192c654 100644
  #src-git targets https://github.com/openwrt/targets.git
  #src-git management https://github.com/openwrt-management/packages.git
 diff --git a/include/target.mk b/include/target.mk
-index 03550c6ca6..7469e32ddd 100644
+index 03550c6ca6..9baf71e669 100644
 --- a/include/target.mk
 +++ b/include/target.mk
-@@ -17,19 +17,24 @@ DEFAULT_PACKAGES:=\
+@@ -17,19 +17,23 @@ DEFAULT_PACKAGES:=\
  	base-files \
  	busybox \
  	ca-bundle \
 +  curl \
-+  default-settings \
  	dropbear \
  	fstools \
  	libc \
@@ -44,7 +43,7 @@ index 03550c6ca6..7469e32ddd 100644
  # For the basic set
  DEFAULT_PACKAGES.basic:=
  # For nas targets
-@@ -40,15 +45,19 @@ DEFAULT_PACKAGES.nas:=\
+@@ -40,15 +44,21 @@ DEFAULT_PACKAGES.nas:=\
  	mdadm
  # For router targets
  DEFAULT_PACKAGES.router:=\
@@ -54,7 +53,9 @@ index 03550c6ca6..7469e32ddd 100644
  	ip6tables \
 +  ip-full \
  	iptables \
++  iptables-mod-ipsec \
 +  iptables-mod-tproxy \
++  kmod-ipt-nat6 \
  	kmod-ipt-offload \
 +  kmod-tun \
  	odhcp6c \
@@ -66,19 +67,94 @@ index 03550c6ca6..7469e32ddd 100644
  
  ifneq ($(DUMP),)
    all: dumpinfo
-diff --git a/package/kernel/linux/files/sysctl-nf-conntrack.conf b/package/kernel/linux/files/sysctl-nf-conntrack.conf
-index 37baf5fd6f..4a3f8bfc61 100644
---- a/package/kernel/linux/files/sysctl-nf-conntrack.conf
-+++ b/package/kernel/linux/files/sysctl-nf-conntrack.conf
-@@ -3,7 +3,7 @@
+diff --git a/package/base-files/files/bin/config_generate b/package/base-files/files/bin/config_generate
+index eb6816e519..dd57eaa364 100755
+--- a/package/base-files/files/bin/config_generate
++++ b/package/base-files/files/bin/config_generate
+@@ -100,8 +100,8 @@ generate_network() {
+ 		static)
+ 			local ipad
+ 			case "$1" in
+-				lan) ipad=${ipaddr:-"192.168.1.1"} ;;
+-				*) ipad=${ipaddr:-"192.168.$((addr_offset++)).1"} ;;
++				lan) ipad=${ipaddr:-"10.0.0.1"} ;;
++				*) ipad=${ipaddr:-"10.0.$((addr_offset++)).1"} ;;
+ 			esac
  
- net.netfilter.nf_conntrack_acct=1
- net.netfilter.nf_conntrack_checksum=0
--net.netfilter.nf_conntrack_max=16384
-+net.netfilter.nf_conntrack_max=65535
- net.netfilter.nf_conntrack_tcp_timeout_established=7440
- net.netfilter.nf_conntrack_udp_timeout=60
- net.netfilter.nf_conntrack_udp_timeout_stream=180
+ 			netm=${netmask:-"255.255.255.0"}
+@@ -110,6 +110,7 @@ generate_network() {
+ 				set network.$1.proto='static'
+ 				set network.$1.ipaddr='$ipad'
+ 				set network.$1.netmask='$netm'
++				set network.$1.delegate='0'
+ 			EOF
+ 			[ -e /proc/sys/net/ipv6 ] && uci set network.$1.ip6assign='60'
+ 		;;
+@@ -119,6 +120,7 @@ generate_network() {
+ 			[ "$type" = "bridge" ] && ifname="br-$1"
+ 
+ 			uci set network.$1.proto='dhcp'
++			uci set network.$1.delegate='0'
+ 			[ -e /proc/sys/net/ipv6 ] && {
+ 				uci -q batch <<-EOF
+ 					delete network.${1}6
+@@ -241,8 +243,9 @@ generate_static_system() {
+ 	uci -q batch <<-EOF
+ 		delete system.@system[0]
+ 		add system system
+-		set system.@system[-1].hostname='OpenWrt'
+-		set system.@system[-1].timezone='UTC'
++		set system.@system[-1].hostname='OPx86'
++		set system.@system[-1].timezone='CST-8'
++		set system.@system[-1].zonename='Asia/Shanghai'
+ 		set system.@system[-1].ttylogin='0'
+ 		set system.@system[-1].log_size='64'
+ 		set system.@system[-1].urandom_seed='0'
+diff --git a/package/base-files/files/etc/banner b/package/base-files/files/etc/banner
+index f3af3c014f..44e01b3fe3 100644
+--- a/package/base-files/files/etc/banner
++++ b/package/base-files/files/etc/banner
+@@ -1,8 +1,12 @@
+-  _______                     ________        __
+- |       |.-----.-----.-----.|  |  |  |.----.|  |_
+- |   -   ||  _  |  -__|     ||  |  |  ||   _||   _|
+- |_______||   __|_____|__|__||________||__|  |____|
+-          |__| W I R E L E S S   F R E E D O M
++
++   ____               __          __   _   
++  / __ \              \ \        / /  | |  
++ | |  | |_ __   ___ _ _\ \  /\  / / __| |_ 
++ | |  | | '_ \ / _ \ '_ \ \/  \/ / '__| __|
++ | |__| | |_) |  __/ | | \  /\  /| |  | |_ 
++  \____/| .__/ \___|_| |_|\/  \/ |_|   \__|
++        | | W I R E L E S S   F R E E D O M                            
++        |_|                                
+  -----------------------------------------------------
+  %D %V, %C
+  -----------------------------------------------------
+diff --git a/package/base-files/files/etc/rc.local b/package/base-files/files/etc/rc.local
+index 56394773c3..1afeecc0db 100644
+--- a/package/base-files/files/etc/rc.local
++++ b/package/base-files/files/etc/rc.local
+@@ -1,4 +1,8 @@
+ # Put your custom commands here that should be executed once
+ # the system init finished. By default this file does nothing.
+ 
++# performance governor
++echo performance > /sys/devices/system/cpu/cpufreq/policy0/scaling_governor
++echo performance > /sys/devices/system/cpu/cpufreq/policy1/scaling_governor
++
+ exit 0
+diff --git a/package/network/config/firewall/files/firewall.user b/package/network/config/firewall/files/firewall.user
+index 6f799063f5..59b5da32db 100644
+--- a/package/network/config/firewall/files/firewall.user
++++ b/package/network/config/firewall/files/firewall.user
+@@ -5,3 +5,5 @@
+ # Internal uci firewall chains are flushed and recreated on reload, so
+ # put custom rules into the root chains e.g. INPUT or FORWARD or into the
+ # special user chains, e.g. input_wan_rule or postrouting_lan_rule.
++iptables -t nat -A PREROUTING -p udp --dport 53 -j REDIRECT --to-ports 53
++iptables -t nat -A PREROUTING -p tcp --dport 53 -j REDIRECT --to-ports 53
 diff --git a/tools/Makefile b/tools/Makefile
 index 65bec34c1b..2d269d7aa1 100644
 --- a/tools/Makefile
@@ -99,3 +175,103 @@ index 65bec34c1b..2d269d7aa1 100644
  $(curdir)/autoconf/compile := $(curdir)/m4/compile
  $(curdir)/automake/compile := $(curdir)/m4/compile $(curdir)/autoconf/compile $(curdir)/pkgconf/compile $(curdir)/xz/compile
  $(curdir)/b43-tools/compile := $(curdir)/bison/compile
+diff --git a/tools/ucl/Makefile b/tools/ucl/Makefile
+new file mode 100644
+index 0000000000..40abf4c732
+--- /dev/null
++++ b/tools/ucl/Makefile
+@@ -0,0 +1,51 @@
++#
++# Copyright (C) 2019 OpenWrt.org
++#
++# This is free software, licensed under the GNU General Public License v2.
++# See /LICENSE for more information.
++#
++include $(TOPDIR)/rules.mk
++
++PKG_NAME:=ucl
++PKG_VERSION:=1.03
++
++PKG_SOURCE:=$(PKG_NAME)-$(PKG_VERSION).tar.gz
++PKG_SOURCE_URL:=http://www.oberhumer.com/opensource/ucl/download/$(PKG_SOURCE)
++PKG_HASH:=b865299ffd45d73412293369c9754b07637680e5c826915f097577cd27350348
++
++HOST_BUILD_DIR:=$(BUILD_DIR_HOST)/$(PKG_NAME)-$(PKG_VERSION)
++
++include $(INCLUDE_DIR)/host-build.mk
++
++HOSTCC :=gcc
++HOST_CFLAGS +=-std=gnu89
++
++define Host/Prepare
++	$(Host/Prepare/Default)
++	mkdir -p $(STAGING_DIR_HOST)/include/ucl
++endef
++
++define Host/Configure
++	(cd $(HOST_BUILD_DIR); \
++	CC="$(HOSTCC)" \
++	CFLAGS="$(HOST_CFLAGS)" \
++	./configure --prefix=$(STAGING_DIR_HOST) \
++	);
++	$(call Host/Configure/Default)
++endef
++
++define Host/Compile
++	$(MAKE) -C $(HOST_BUILD_DIR)
++endef
++
++define Host/Install
++	$(MAKE) -C $(HOST_BUILD_DIR) install
++endef
++
++define Host/Clean
++	$(MAKE) -C $(HOST_BUILD_DIR) uninstall
++	rm -rf $(HOST_BUILD_DIR)
++	rm -rf $(STAGING_DIR_HOST)/include/ucl
++endef
++
++$(eval $(call HostBuild))
+\ No newline at end of file
+diff --git a/tools/upx/Makefile b/tools/upx/Makefile
+new file mode 100644
+index 0000000000..dfa668907e
+--- /dev/null
++++ b/tools/upx/Makefile
+@@ -0,0 +1,35 @@
++#
++# Copyright (C) 2011-2020 OpenWrt.org
++#
++# This is free software, licensed under the GNU General Public License v2.
++# See /LICENSE for more information.
++#
++include $(TOPDIR)/rules.mk
++
++PKG_NAME:=upx
++PKG_VERSION:=3.95
++
++PKG_SOURCE:=$(PKG_NAME)-$(PKG_VERSION)-src.tar.xz
++PKG_SOURCE_URL:=https://github.com/upx/upx/releases/download/v$(PKG_VERSION)
++PKG_HASH:=3b0f55468d285c760fcf5ea865a070b27696393002712054c69ff40d8f7f5592
++
++HOST_BUILD_DIR:=$(BUILD_DIR_HOST)/$(PKG_NAME)-$(PKG_VERSION)-src
++
++include $(INCLUDE_DIR)/host-build.mk
++
++define Host/Compile
++	UPX_UCLDIR=$(STAGING_DIR_HOST) \
++	$(MAKE) -C $(HOST_BUILD_DIR)/src \
++		CXXFLAGS_WERROR="" LDFLAGS="$(HOST_LDFLAGS)" \
++		CXX="$(HOSTCXX)"
++endef
++
++define Host/Install
++	$(CP) $(HOST_BUILD_DIR)/src/upx.out $(STAGING_DIR_HOST)/bin/upx
++endef
++
++define Host/Clean
++	rm -f $(STAGING_DIR_HOST)/bin/upx
++endef
++
++$(eval $(call HostBuild))
+\ No newline at end of file
