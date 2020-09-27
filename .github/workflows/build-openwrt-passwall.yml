@@ -4,7 +4,7 @@
 # Author: Dre Johnson dre@phreshr.com
 #=================================================
 
-name: OpenWrt x86 Build
+name: OpenWrt x86 Build (Passwall)
 
 on:
   repository_dispatch:
@@ -70,12 +70,14 @@ jobs:
     # Patch
     - name: Run Patch
       run: |
-        cp main.patch ./openwrt && cd ./openwrt && patch -p1 < main.patch
+        cp main.patch ./openwrt && cd ./openwrt && patch -p1 < passwall.patch
 
-    - name: Default config
+    # PassWall
+    - name: Passwall packages and config
       run: |
         cd openwrt
-        cp -f $GITHUB_WORKSPACE/.config.default $GITHUB_WORKSPACE/.config
+        git clone https://github.com/Lienol/openwrt-package package/lienol
+        cp -f $GITHUB_WORKSPACE/.config.passwall $GITHUB_WORKSPACE/.config
 
     - name: Update and install feeds
       run: | 
@@ -111,7 +113,7 @@ jobs:
         [ -s DEVICE_NAME ] && echo "::set-env name=DEVICE_NAME::_$(cat DEVICE_NAME)"
         echo "::set-env name=FILE_DATE::_$(date +"%Y%m%d%H%M")"
 
-    - name: Check space usage
+        - name: Check space usage
       if: (!cancelled())
       run: df -hT
 
