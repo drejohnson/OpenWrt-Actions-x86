@@ -1,8 +1,7 @@
 #!/bin/sh
 
-# cp -rf ../package/default-settings package/default-settings
-
 # git clone https://github.com/jerrykuku/luci-theme-argon.git package/luci-theme-argon
+# git clone https://github.com/Lienol/openwrt-package package/lienol
 
 # mkdir package/luci-app-openclash
 # cd package/luci-app-openclash
