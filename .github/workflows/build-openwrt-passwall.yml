@@ -151,3 +151,10 @@ jobs:
             ${{ env.useVersionInfo }}
             ${{ github.event.commits[0].message }}
         files: ${{ env.FIRMWARE }}/*
+
+    - name : Upload artifact
+      #working-directory: ./openwrt
+      uses: actions/upload-artifact@master
+      with:
+        name: OpenWrt
+        path: bin
