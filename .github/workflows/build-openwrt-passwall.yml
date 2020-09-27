@@ -70,7 +70,7 @@ jobs:
     # Patch
     - name: Run Patch
       run: |
-        cp main.patch ./openwrt && cd ./openwrt && patch -p1 < passwall.patch
+        cp main.patch ./openwrt && cd ./openwrt && patch -p1 < main.patch
 
     # PassWall
     - name: Passwall packages and config
