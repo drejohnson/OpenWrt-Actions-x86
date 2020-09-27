@@ -7,14 +7,15 @@
 name: OpenWrt x86 Build
 
 on:
-  repository_dispatch:
-  release:
-    types: published
+  # repository_dispatch:
+  # release:
+  #   types: published
   push:
     branches:
       - master
     paths:
       - '.github/workflows/build-openwrt.yml'
+      - '.config.default'
 
 #  schedule:
 #    - cron: 0 8 * * 5
