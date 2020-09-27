@@ -4,7 +4,7 @@
 # Author: Dre Johnson dre@phreshr.com
 #=================================================
 
-name: OpenWrt x86 Build
+name: OpenWrt x86 Build (Passwall)
 
 on:
   repository_dispatch:
@@ -24,7 +24,7 @@ env:
   REPO_BRANCH: master
   CONFIG_FILE: .config
   DIY_SH: diy.sh
-  PASSWALL: false
+  PASSWALL: true
   SSH_ACTIONS: false
   GITHUB_USER_NAME: drejohnson
   GITHUB_USER_EMAIL: ${{ secrets.EMAIL }}
