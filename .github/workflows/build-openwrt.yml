@@ -7,15 +7,13 @@
 name: OpenWrt x86 Build
 
 on:
-  # repository_dispatch:
-  # release:
-  #   types: published
   push:
     branches:
       - master
     paths:
       - '.github/workflows/build-openwrt.yml'
       - '.config.default'
+      - '.config.passwall'
 
 #  schedule:
 #    - cron: 0 8 * * 5
@@ -25,6 +23,7 @@ env:
   REPO_BRANCH: master
   CONFIG_FILE: .config
   DIY_SH: diy.sh
+  PASSWALL: true
   GITHUB_USER_NAME: drejohnson
   GITHUB_USER_EMAIL: ${{ secrets.EMAIL }}
   GITHUB: https://github.com/drejohnson/OpenWrt-Actions-x86.git
@@ -73,7 +72,16 @@ jobs:
       run: |
         cp main.patch ./openwrt && cd ./openwrt && patch -p1 < main.patch
 
+    # PassWall
+    - name: Passwall packages and config
+      if: env.PASSWALL == 'true'
+      run: |
+        cd openwrt
+        git clone https://github.com/Lienol/openwrt-package package/lienol
+        cp -f $GITHUB_WORKSPACE/.config.passwall $GITHUB_WORKSPACE/.config
+
     - name: Default config
+      if: env.PASSWALL != 'true'
       run: |
         cd openwrt
         cp -f $GITHUB_WORKSPACE/.config.default $GITHUB_WORKSPACE/.config
@@ -124,6 +132,13 @@ jobs:
         rm -rf packages
         echo "::set-env name=FIRMWARE::$PWD"
         echo "::set-output name=status::success"
+
+    - name: Upload firmware directory
+      uses: actions/upload-artifact@main
+      if: steps.organize.outputs.status == 'success' && !cancelled()
+      with:
+        name: OpenWrt_firmware${{ env.DEVICE_NAME }}${{ env.FILE_DATE }}
+        path: ${{ env.FIRMWARE }}
 
     - name: Generate Tag
       id: tag
