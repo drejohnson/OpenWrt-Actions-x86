@@ -75,11 +75,10 @@ jobs:
     # Packages Patch
     - name: Update feeds and apply patch 
       run: |
-        cp packages.patch ./openwrt/feeds/packages
         cd openwrt
         ./scripts/feeds update -a
         cd feeds/packages
-        patch -p1 < packages.patch
+        patch -p1 < $GITHUB_WORKSPACE/packages.patch
 
     - name: Update and install feeds
       run: | 
