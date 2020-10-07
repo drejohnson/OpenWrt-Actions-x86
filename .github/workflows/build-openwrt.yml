@@ -23,7 +23,7 @@ env:
   REPO_BRANCH: master
   CONFIG_FILE: .config
   DIY_SH: diy.sh
-  PASSWALL: true
+  PASSWALL: false
   GITHUB_USER_NAME: drejohnson
   GITHUB_USER_EMAIL: ${{ secrets.EMAIL }}
   GITHUB: https://github.com/drejohnson/OpenWrt-Actions-x86.git
