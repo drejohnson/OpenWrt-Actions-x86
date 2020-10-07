@@ -72,13 +72,13 @@ jobs:
       run: |
         cp main.patch ./openwrt && cd ./openwrt && patch -p1 < main.patch
 
-    # Packages Patch
-    - name: Update feeds and apply patch 
-      run: |
-        cd openwrt
-        ./scripts/feeds update -a
-        cd feeds/packages
-        patch -p1 < $GITHUB_WORKSPACE/packages.patch
+    # # Packages Patch
+    # - name: Update feeds and apply patch 
+    #   run: |
+    #     cd openwrt
+    #     ./scripts/feeds update -a
+    #     cd feeds/packages
+    #     patch -p1 < $GITHUB_WORKSPACE/packages.patch
 
     - name: Update and install feeds
       run: | 
