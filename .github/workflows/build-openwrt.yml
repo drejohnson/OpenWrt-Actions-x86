@@ -23,7 +23,7 @@ env:
   REPO_BRANCH: master
   CONFIG_FILE: .config
   DIY_SH: diy.sh
-  PASSWALL: false
+  PASSWALL: true
   GITHUB_USER_NAME: drejohnson
   GITHUB_USER_EMAIL: ${{ secrets.EMAIL }}
   GITHUB: https://github.com/drejohnson/OpenWrt-Actions-x86.git
@@ -72,18 +72,10 @@ jobs:
       run: |
         cp main.patch ./openwrt && cd ./openwrt && patch -p1 < main.patch
 
-    # # Packages Patch
-    # - name: Update feeds and apply patch 
-    #   run: |
-    #     cd openwrt
-    #     ./scripts/feeds update -a
-    #     cd feeds/packages
-    #     patch -p1 < $GITHUB_WORKSPACE/packages.patch
-
     - name: Update and install feeds
       run: | 
         cd openwrt
-        ./scripts/feeds update -i
+        ./scripts/feeds update -a
         ./scripts/feeds install -a
 
     # PassWall Config
