@@ -107,7 +107,7 @@ jobs:
       run: |
         cd openwrt
         make defconfig
-        make download -j8
+        make -j8 download V=s
         find dl -size -1024c -exec ls -l {} \;
         find dl -size -1024c -exec rm -f {} \;
 
@@ -116,7 +116,7 @@ jobs:
       if: env.PASSWALL == 'true'
       run: |
         cd openwrt
-        make package/upx/{clean,compile} V=s
+        make -j1 package/upx/{clean,compile} V=s
 
     - name: Compile the firmware
       id: compile
