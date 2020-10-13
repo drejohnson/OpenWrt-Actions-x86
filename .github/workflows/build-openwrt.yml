@@ -83,6 +83,7 @@ jobs:
       if: env.PASSWALL == 'true'
       run: |
         cd openwrt
+        git clone https://github.com/kuoruan/openwrt-upx.git package/openwrt-upx
         git clone https://github.com/Lienol/openwrt-package package/lienol
         cp -f $GITHUB_WORKSPACE/.config.passwall $GITHUB_WORKSPACE/.config
 
@@ -101,7 +102,7 @@ jobs:
         git clone https://github.com/jerrykuku/luci-theme-argon.git package/luci-theme-argon
         $GITHUB_WORKSPACE/$DIY_SH
 
-    - name: Download package
+    - name: Initialize config
       id: package
       run: |
         cd openwrt
@@ -109,6 +110,13 @@ jobs:
         make download -j8
         find dl -size -1024c -exec ls -l {} \;
         find dl -size -1024c -exec rm -f {} \;
+
+    # Compile UPX
+    - name: Compile UPX
+      if: env.PASSWALL == 'true'
+      run: |
+        cd openwrt
+        make package/upx/{clean,compile} V=s
 
     - name: Compile the firmware
       id: compile
