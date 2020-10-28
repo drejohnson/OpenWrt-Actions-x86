@@ -14,12 +14,14 @@ index 03bfacb620..de3192c654 100644
  #src-git targets https://github.com/openwrt/targets.git
  #src-git management https://github.com/openwrt-management/packages.git
 diff --git a/include/target.mk b/include/target.mk
-index 93c1c42552..5f081375f2 100644
+index a2e76f8149..83caf20e8b 100644
 --- a/include/target.mk
 +++ b/include/target.mk
-@@ -17,19 +17,22 @@ DEFAULT_PACKAGES:=\
+@@ -15,20 +15,24 @@ DEVICE_TYPE?=router
+ # Default packages - the really basic set
+ DEFAULT_PACKAGES:=\
  	base-files \
- 	busybox \
++	busybox \
  	ca-bundle \
 +  curl \
  	dropbear \
@@ -39,10 +41,10 @@ index 93c1c42552..5f081375f2 100644
 -	urngd
 +	urngd \
 +  wget \
- # For the basic set
- DEFAULT_PACKAGES.basic:=
- # For nas targets
-@@ -40,15 +43,21 @@ DEFAULT_PACKAGES.nas:=\
+ 
+ ifneq ($(CONFIG_SELINUX),)
+ DEFAULT_PACKAGES+=busybox-selinux procd-selinux
+@@ -46,15 +50,21 @@ DEFAULT_PACKAGES.nas:=\
  	mdadm
  # For router targets
  DEFAULT_PACKAGES.router:=\
