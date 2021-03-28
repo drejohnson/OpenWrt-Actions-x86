@@ -4,39 +4,36 @@
 # Author: Dre Johnson dre@phreshr.com
 #=================================================
 
-name: OpenWrt x86 Build
+name: OpenWrt x86 Build 
 
 on:
-  push:
-    branches:
-      - master
-    paths:
-      - '.github/workflows/build-openwrt.yml'
-      - '.config.default'
-      - '.config.passwall'
+  repository_dispatch:
+  workflow_dispatch:
+    inputs:
+      ssh:
+        description: 'SSH connection to Actions'
+        required: false
+        default: 'false'
 
-#  schedule:
-#    - cron: 0 8 * * 5
+  schedule:
+    - cron: 0 8 * * 5
 
 env:
   REPO_URL: https://git.openwrt.org/openwrt/openwrt.git
-  REPO_BRANCH: master
+  REPO_BRANCH: openwrt-21.02
+  FEEDS_CONF: feeds.conf.default
   CONFIG_FILE: .config
   DIY_SH: diy.sh
-  PASSWALL: false
-  GITHUB_USER_NAME: drejohnson
-  GITHUB_USER_EMAIL: ${{ secrets.EMAIL }}
-  GITHUB: https://github.com/drejohnson/OpenWrt-Actions-x86.git
   UPLOAD_BIN_DIR: false
   UPLOAD_FIRMWARE: true
+  UPLOAD_COWTRANSFER: false
   UPLOAD_WETRANSFER: false
-  CREATE_RELEASE: true
+  UPLOAD_RELEASE: true
   TZ: Asia/Shanghai
 
 jobs:
   build:
     runs-on: ubuntu-latest
-    if: github.event.repository.owner.id == github.event.sender.id
 
     steps:
     - name: Checkout
@@ -48,7 +45,8 @@ jobs:
       run: |
         sudo rm -rf /etc/apt/sources.list.d/* /usr/share/dotnet /usr/local/lib/android /opt/ghc
         sudo -E apt-get -qq update
-        sudo -E apt-get -qq install $(curl -fsSL git.io/depends-ubuntu-2004)
+        sudo -E apt-get -qq full-upgrade
+        sudo -E apt-get -qq install $(curl -fsSL git.io/depends-ubuntu-latest)
         sudo -E apt-get -qq autoremove --purge
         sudo -E apt-get -qq clean
         sudo timedatectl set-timezone "$TZ"
@@ -59,88 +57,74 @@ jobs:
       working-directory: /workdir
       run: |
         df -hT $PWD
-        git clone --depth 1 $REPO_URL openwrt
+        git clone $REPO_URL -b $REPO_BRANCH openwrt
         ln -sf /workdir/openwrt $GITHUB_WORKSPACE/openwrt
-        cd openwrt
-        useVersionInfo=$(git show -s --date=short --format="Author: %an<br/>Date: %cd<br/>Commit: %s")
-        echo "::set-env name=useVersionInfo::$useVersionInfo"
-        echo "::set-env name=DATE::$(TZ=UTC-8 date "+%Y%m%d")"
-        echo "::set-env name=RELEASE_DATE::$(TZ=UTC-8 date "+%Y-%m-%d")"
 
-    # Main Patch
-    - name: Run Patch
+    - name: Apply Patches
       run: |
-        cp main.patch ./openwrt && cd ./openwrt && patch -p1 < main.patch
+        cp patches/main.patch openwrt
+        cp patches/add-upx.patch openwrt
+        cp patches/packages.patch openwrt
 
-    - name: Update and install feeds
-      run: | 
         cd openwrt
+        patch -p1 < main.patch
+        patch -p1 < add-upx.patch
+
         ./scripts/feeds update -a
-        ./scripts/feeds install -a
+        cd feeds/packages
+        patch -p1 -i ../../packages.patch
 
-    # PassWall Config
-    - name: Passwall packages and config
-      if: env.PASSWALL == 'true'
-      run: |
+    - name: Update feeds and Install feeds
+      run:  |
         cd openwrt
-        git clone https://github.com/kuoruan/openwrt-upx.git package/openwrt-upx
-        git clone https://github.com/Lienol/openwrt-package package/lienol
-        cp -f $GITHUB_WORKSPACE/.config.passwall $GITHUB_WORKSPACE/.config
-
-    # Default Config
-    - name: Default config
-      if: env.PASSWALL != 'true'
-      run: |
-        cd openwrt
-        cp -f $GITHUB_WORKSPACE/.config.default $GITHUB_WORKSPACE/.config
+        ./scripts/feeds update -i && ./scripts/feeds install -a
 
     - name: Load custom configuration
       run: |
+        [ -e files ] && mv files openwrt/files
         [ -e $CONFIG_FILE ] && mv $CONFIG_FILE openwrt/.config
         chmod +x $DIY_SH
         cd openwrt
-        git clone https://github.com/jerrykuku/luci-theme-argon.git package/luci-theme-argon
         $GITHUB_WORKSPACE/$DIY_SH
 
-    - name: Initialize config
+    - name: Download package
       id: package
       run: |
         cd openwrt
         make defconfig
-        make -j8 download V=s
+        make clean download world -j8
         find dl -size -1024c -exec ls -l {} \;
         find dl -size -1024c -exec rm -f {} \;
-
-    # Compile UPX
-    - name: Compile UPX
-      if: env.PASSWALL == 'true'
-      run: |
-        cd openwrt
-        make -j$(nproc) toolchain/install V=s
-        make package/upx/{clean,compile} V=s
 
     - name: Compile the firmware
       id: compile
       run: |
         cd openwrt
         echo -e "$(nproc) thread compile"
-        make -j$(nproc) || make -j1 V=s
+        make -j$(nproc) || make -j1 || make -j1 V=s
         echo "::set-output name=status::success"
         grep '^CONFIG_TARGET.*DEVICE.*=y' .config | sed -r 's/.*DEVICE_(.*)=y/\1/' > DEVICE_NAME
-        [ -s DEVICE_NAME ] && echo "::set-env name=DEVICE_NAME::_$(cat DEVICE_NAME)"
-        echo "::set-env name=FILE_DATE::_$(date +"%Y%m%d%H%M")"
+        [ -s DEVICE_NAME ] && echo "DEVICE_NAME=_$(cat DEVICE_NAME)" >> $GITHUB_ENV
+        echo "FILE_DATE=_$(date +"%Y%m%d%H%M")" >> $GITHUB_ENV
 
     - name: Check space usage
       if: (!cancelled())
       run: df -hT
 
+    - name: Upload bin directory
+      uses: actions/upload-artifact@main
+      if: steps.compile.outputs.status == 'success' && env.UPLOAD_BIN_DIR == 'true'
+      with:
+        name: OpenWrt_bin${{ env.DEVICE_NAME }}${{ env.FILE_DATE }}
+        path: openwrt/bin
+
     - name: Organize files
       id: organize
-      if: steps.compile.outputs.status == 'success' && env.UPLOAD_FIRMWARE == 'true' && !cancelled()
+      if: env.UPLOAD_FIRMWARE == 'true' && !cancelled()
       run: |
         cd openwrt/bin/targets/*/*
         rm -rf packages
-        echo "::set-env name=FIRMWARE::$PWD"
+        echo "FIRMWARE=$PWD" >> $GITHUB_ENV
         echo "::set-output name=status::success"
 
     - name: Upload firmware directory
@@ -150,27 +134,55 @@ jobs:
         name: OpenWrt_firmware${{ env.DEVICE_NAME }}${{ env.FILE_DATE }}
         path: ${{ env.FIRMWARE }}
 
-    - name: Generate Tag
-      id: tag
-      if: steps.compile.outputs.status == 'success' && env.CREATE_RELEASE == 'true' && !cancelled()
+    - name: Upload firmware to cowtransfer
+      id: cowtransfer
+      if: steps.organize.outputs.status == 'success' && env.UPLOAD_COWTRANSFER == 'true' && !cancelled()
       run: |
-        echo ::set-env name=RELEASE_TAG::"$(TZ=UTC-8 date +"%Y-%m-%d")"
+        curl -fsSL git.io/file-transfer | sh
+        ./transfer cow --block 2621440 -s -p 64 --no-progress ${FIRMWARE} 2>&1 | tee cowtransfer.log
+        echo "::warning file=cowtransfer.com::$(cat cowtransfer.log | grep https)"
+        echo "::set-output name=url::$(cat cowtransfer.log | grep https | cut -f3 -d" ")"
+
+    - name: Upload firmware to WeTransfer
+      id: wetransfer
+      if: steps.organize.outputs.status == 'success' && env.UPLOAD_WETRANSFER == 'true' && !cancelled()
+      run: |
+        curl -fsSL git.io/file-transfer | sh
+        ./transfer wet -s -p 16 --no-progress ${FIRMWARE} 2>&1 | tee wetransfer.log
+        echo "::warning file=wetransfer.com::$(cat wetransfer.log | grep https)"
+        echo "::set-output name=url::$(cat wetransfer.log | grep https | cut -f3 -d" ")"
+
+    - name: Generate release tag
+      id: tag
+      if: env.UPLOAD_RELEASE == 'true' && !cancelled()
+      run: |
+        echo "::set-output name=release_tag::$(date +"%Y.%m.%d-%H%M")"
+        touch release.txt
+        [ $UPLOAD_COWTRANSFER = true ] && echo "🔗 [Cowtransfer](${{ steps.cowtransfer.outputs.url }})" >> release.txt
+        [ $UPLOAD_WETRANSFER = true ] && echo "🔗 [WeTransfer](${{ steps.wetransfer.outputs.url }})" >> release.txt
         echo "::set-output name=status::success"
-    
-    - name: Upload Firmware To Release
+
+    - name: Upload firmware to release
       uses: softprops/action-gh-release@v1
       if: steps.tag.outputs.status == 'success' && !cancelled()
       env:
-        GITHUB_TOKEN: ${{ secrets.RELEASE_TOKEN }}
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
       with:
-        name: x86 ${{ env.BRANCH }} 🚀 | Automatic compilation / ${{ env.RELEASE_TAG }}
-        tag_name: ${{ env.RELEASE_DATE }}
-        body: |            
-            1. This firmware is automatically compiled
-            2. Only complete firmware is provided in the release
-            3. Source Code：${{ env.REPO_URL }}
-            -- Build by ${{ env.GITHUB_USER_NAME }} @ with Github Action on ${{ env.RELEASE_DATE }}
-            🚀 Auto build           
-            ${{ env.useVersionInfo }}
-            ${{ github.event.commits[0].message }}
+        tag_name: ${{ steps.tag.outputs.release_tag }}
+        body_path: release.txt
         files: ${{ env.FIRMWARE }}/*
+
+    - name: Delete workflow runs
+      uses: GitRML/delete-workflow-runs@main
+      with:
+        retain_days: 1
+        keep_minimum_runs: 3
+
+    - name: Remove old Releases
+      uses: dev-drprasad/delete-older-releases@v0.1.0
+      if: env.UPLOAD_RELEASE == 'true' && !cancelled()
+      with:
+        keep_latest: 3
+        delete_tags: true
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
