@@ -64,20 +64,6 @@ index 64e7667a4..cfba85c50 100644
  $(eval $(call BuildPackage,miniupnpd))
 +$(eval $(call BuildPackage,miniupnpd-igdv1))
 \ No newline at end of file
-diff --git a/applications/luci-app-https-dns-proxy/root/etc/uci-defaults/40_luci-https-dns-proxy b/applications/luci-app-https-dns-proxy/root/etc/uci-defaults/40_luci-https-dns-proxy
-index a1ecfcea2..0f4921acf 100644
---- a/applications/luci-app-https-dns-proxy/root/etc/uci-defaults/40_luci-https-dns-proxy
-+++ b/applications/luci-app-https-dns-proxy/root/etc/uci-defaults/40_luci-https-dns-proxy
-@@ -1,3 +1,9 @@
- #!/bin/sh
-+uci -q batch <<-EOF >/dev/null
-+	delete ucitrack.@https-dns-proxy[-1]
-+	add ucitrack https-dns-proxy
-+	set ucitrack.@https-dns-proxy[-1].init=https-dns-proxy
-+	commit ucitrack
-+EOF
- rm -rf /var/luci-modulecache/; rm -f /var/luci-indexcache;
- exit 0
 diff --git a/net/smartdns/Makefile b/net/smartdns/Makefile
 index 87de71826..1762c3258 100644
 --- a/net/smartdns/Makefile
